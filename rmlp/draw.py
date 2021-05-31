@@ -1,4 +1,5 @@
 import numpy as np
+import plotly
 import plotly.graph_objs as go
 
 
@@ -17,7 +18,7 @@ def draw_cost(value_array: np.ndarray, x_name: str, y_name: str, smth: str) -> g
 
 
 def draw_model_real(model_out: np.ndarray, real_out: np.ndarray, name: str, x_axis_name: str, y_axis_name: str,
-                    real_color: str, model_color: str):
+                    real_color: str, model_color: str) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[i for i in range(len(model_out))], y=model_out, name="model " + name,
                              line=dict(color=model_color), mode="markers"))
@@ -26,3 +27,8 @@ def draw_model_real(model_out: np.ndarray, real_out: np.ndarray, name: str, x_ax
     fig.update_traces(showlegend=True)
     fig.update_layout(legend_orientation="h", title=name, xaxis_title=x_axis_name, yaxis_title=y_axis_name)
     fig.show()
+    return fig
+
+
+def save_param_to_html(fig: go.Figure, parameters_file_name: str, param_name: str):
+    plotly.io.write_html(fig=fig, file=f'{parameters_file_name}_{param_name}')

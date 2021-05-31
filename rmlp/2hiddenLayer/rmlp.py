@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 
 from fc_layer import FcLayer
@@ -35,8 +37,21 @@ class Rmlp:
         self.r_fc2.layer_weighs -= lr * gradients[1]
         self.output_fc.layer_weighs -= lr * gradients[2]
 
-    def fit(self, lr, epoch_count, train_set: DataSet) -> list[float]:
+    def load_weights(self, w1: np.ndarray, w2: np.ndarray, w3: np.ndarray):
+        self.r_fc1.layer_weighs = w1
+        self.r_fc2.layer_weighs = w2
+        self.output_fc.layer_weighs = w3
+
+    def save_data(self, parameters_file_name, lr, epoch_count=0):
+        with open(parameters_file_name, 'wb') as parameters_file:
+            w1 = self.r_fc1.layer_weighs
+            w2 = self.r_fc2.layer_weighs
+            w3 = self.output_fc.layer_weighs
+            pickle.dump([w1, w2, w3, lr, epoch_count], parameters_file)
+
+    def fit(self, lr, epoch_count, train_set: DataSet, parameters_file_name: str) -> list[float]:
         mse_list = []
+        self.save_data(parameters_file_name + "_start", lr)
         for i in range(epoch_count):
             print("epoch: ", i + 1, end=' ')
             prev_outputs: Outputs = [np.zeros(self.r_fc1.output_features_size),
@@ -47,7 +62,6 @@ class Rmlp:
             grads: Gradients = [np.zeros_like(self.r_fc1.layer_weighs), np.zeros_like(self.r_fc2.layer_weighs),
                                 np.zeros_like(self.output_fc.layer_weighs)]
             avg_mse = 0.0
-
             for item in train_set:
                 x, y = item
                 [input1, input2, input3], [v1, v2, v3], prev_outputs = self.forward(x, prev_outputs)
@@ -63,16 +77,19 @@ class Rmlp:
             print(avg_mse)
             mse_list.append(avg_mse)
             self._update_weights(grads, lr)
+        self.save_data(parameters_file_name, lr, epoch_count)
         return mse_list
 
-    def eval(self, test_data: DataSet) -> list[np.ndarray]:
+    def eval(self, test_data: DataSet) -> (list[np.ndarray], list[float]):
         prev_outputs: Outputs = [np.zeros(self.r_fc1.output_features_size),
                                  np.zeros(self.r_fc2.output_features_size),
                                  np.zeros(self.output_fc.output_features_size)]
         res = []
+        error_list = []
         for item in test_data:
             x, y = item
             x = fix_nan(x, 0.0)
             _, _, prev_outputs = self.forward(x, prev_outputs)
             res.append(prev_outputs[-1])
-        return res
+            error_list.append(mse(prev_outputs[-1], y))
+        return res, error_list
